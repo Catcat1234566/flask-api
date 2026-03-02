@@ -1,0 +1,42 @@
+services:
+  flask-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: se-ai-api
+    restart: unless-stopped
+    ports:
+      - "2569:2569"
+    environment:
+      - FLASK_ENV=production
+    volumes:
+      - yolo_cache:/root/.cache
+    networks:
+      - se-ai-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2569/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: se-ai-ngrok
+    restart: unless-stopped
+    depends_on:
+      flask-api:
+        condition: service_healthy
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command: http flask-api:2569
+    ports:
+      - "4040:4040"
+    networks:
+      - se-ai-net
+
+networks:
+  se-ai-net:
+    driver: bridge
+
+volumes:
+  yolo_cache:
